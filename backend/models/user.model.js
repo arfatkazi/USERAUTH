@@ -17,7 +17,6 @@ const userSchema = new mongoose.Schema(
 
     age: {
       type: Number,
-      required: [true, "Age is required"],
       min: [0, "Age must be a positive number"],
     },
 
@@ -28,6 +27,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       match: [/.+\@.+\..+/, "Please enter a valid email address"],
+      index: true,
     },
 
     password: {
@@ -53,11 +53,14 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-//generating hash password
+// userSchema.index({ email: 1 });
+
+// GENERATING THE HASH PASSWORD
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -65,41 +68,41 @@ userSchema.pre("save", async function (next) {
     next();
   } catch (err) {
     next(err);
+    console.log(`error : ${err.message}`);
   }
 });
 
-//comapring the password
-userSchema.methods.comparePassWord = async function (candidatePassword) {
+// COMPARING THE PASSWORD
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// gnerate reset token
-
+// GENERATE RESET TOKEN
 userSchema.methods.generateResetToken = function () {
   const token = crypto.randomBytes(32).toString("hex");
-
   this.resetPasswordToken = token;
-
-  this.resetPasswordTokenExpiresAt = Date.now() + 3600000;
-
+  this.resetPasswordTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
   return token;
 };
-//generate Verification Token
+
+// GENERATE VERIFICATION TOKEN
 userSchema.methods.generateVerificationToken = function () {
   const token = crypto.randomBytes(32).toString("hex");
-
   this.verificationToken = token;
-  this.verificationTokenExpiresAt = Date.now() + 3600000;
-
+  this.verificationTokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
   return token;
 };
 
-// is token expired
-
+// Check if token is expired
 userSchema.methods.isTokenExpired = function (tokenType) {
   const now = Date.now();
-
-  return this[`${tokenType}ExpiresAt`] < now;
+  if (tokenType === "resetPasswordToken") {
+    return this.resetPasswordTokenExpiresAt < now;
+  } else if (tokenType === "verificationToken") {
+    return this.verificationTokenExpiresAt < now;
+  }
+  throw new Error(`Invalid token type: ${tokenType}`);
 };
 
 const User = mongoose.model("User", userSchema);
