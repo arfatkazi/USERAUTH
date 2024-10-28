@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 const userSchema = new mongoose.Schema(
   {
@@ -70,6 +71,35 @@ userSchema.pre("save", async function (next) {
 //comapring the password
 userSchema.methods.comparePassWord = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// gnerate reset token
+
+userSchema.methods.generateResetToken = function () {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  this.resetPasswordToken = token;
+
+  this.resetPasswordTokenExpiresAt = Date.now() + 3600000;
+
+  return token;
+};
+//generate Verification Token
+userSchema.methods.generateVerificationToken = function () {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  this.verificationToken = token;
+  this.verificationTokenExpiresAt = Date.now() + 3600000;
+
+  return token;
+};
+
+// is token expired
+
+userSchema.methods.isTokenExpired = function (tokenType) {
+  const now = Date.now();
+
+  return this[`${tokenType}ExpiresAt`] < now;
 };
 
 const User = mongoose.model("User", userSchema);

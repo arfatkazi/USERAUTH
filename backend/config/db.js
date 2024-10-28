@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
-
+import debug from "debug";
+const log = debug("app:database");
 export const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`database connected properly!`);
+    log(`"Database connected properly!"`);
   } catch (err) {
-    console.log(`database not connected!`);
-    console.log(err.message);
+    log(`"Database not connected!"`);
+    log(`Error: ${err.message}`);
     process.exit(1);
   }
 };
